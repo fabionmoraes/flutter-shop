@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shop/models/cart.dart';
 import 'package:shop/models/cart_item.dart';
+import 'package:shop/utils/alert.dart';
 
 class CartItemWidget extends StatelessWidget {
   final CartItem cartItem;
@@ -32,6 +33,10 @@ class CartItemWidget extends StatelessWidget {
           size: 40,
         ),
       ),
+      confirmDismiss: (_) {
+        return AlertMessage(context)
+            .confirmed('Quer remover o item do carrinho?');
+      },
       onDismissed: (_) {
         provider.removeItem(cartItem.productId);
       },
