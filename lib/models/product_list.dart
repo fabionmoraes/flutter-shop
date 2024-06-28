@@ -1,11 +1,20 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:shop/data/dummy_data.dart';
+import 'package:http/http.dart' as http;
+import 'package:shop/exceptions/http_exception.dart';
 import 'package:shop/models/product.dart';
 
+import '../utils/constants.dart';
+
+import '../utils/snackbar.dart';
+
 class ProductList with ChangeNotifier {
-  final List<Product> _items = dummyProducts;
+  final _baseUrl = Constants.productBaseUrl;
+  final _errorText = 'Ocorreu algum erro na requisição';
+
+  final List<Product> _items = [];
 
   List<Product> get items => [..._items];
   List<Product> get favoritesItems =>
@@ -15,7 +24,7 @@ class ProductList with ChangeNotifier {
     return _items.length;
   }
 
-  void saveProduct(Map<String, Object> data) {
+  Future<void> saveProduct(BuildContext ctx, Map<String, Object> data) {
     bool hasId = data['id'] != null;
 
     final product = Product(
@@ -27,32 +36,116 @@ class ProductList with ChangeNotifier {
     );
 
     if (hasId) {
-      updateProduct(product);
+      return updateProduct(ctx, product);
     } else {
-      addProduct(product);
+      return addProduct(ctx, product);
     }
   }
 
-  void addProduct(Product product) {
-    _items.add(product);
+  Future<void> loadProducts() async {
+    _items.clear();
+
+    final response = await http.get(Uri.parse('$_baseUrl.json'));
+
+    if (response.body == 'null') {
+      return;
+    }
+
+    Map<String, dynamic> data = jsonDecode(response.body);
+
+    data.forEach((productId, productData) {
+      _items.add(Product(
+        id: productId,
+        name: productData['name'],
+        description: productData['description'],
+        price: productData['price'],
+        imageUrl: productData['imageUrl'],
+        isFavorite: productData['isFavorite'],
+      ));
+    });
+
     notifyListeners();
   }
 
-  void updateProduct(Product product) {
-    int index = _items.indexWhere((p) => p.id == product.id);
+  Future<void> addProduct(BuildContext ctx, Product product) async {
+    final toastfy = Toastfy(ctx);
 
-    if (index >= 0) {
-      _items[index] = product;
-      notifyListeners();
+    try {
+      final response = await http.post(Uri.parse('$_baseUrl.json'),
+          body: jsonEncode({
+            "name": product.name,
+            "price": product.price,
+            "description": product.description,
+            "imageUrl": product.imageUrl,
+            "isFavorite": product.isFavorite,
+          }));
+
+      final result = jsonDecode(response.body);
+
+      if (result['error'] ?? false) {
+        toastfy.error(_errorText, null, 4);
+      } else {
+        _items.add(Product(
+          id: result['name'] ?? '',
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          imageUrl: product.imageUrl,
+        ));
+
+        toastfy.success('Adicionado com sucesso!', null, 3);
+
+        notifyListeners();
+      }
+    } catch (err) {
+      toastfy.error(_errorText, null, 4);
     }
   }
 
-  void removeProduct(Product product) {
+  Future<void> updateProduct(BuildContext ctx, Product product) async {
+    final toastfy = Toastfy(ctx);
     int index = _items.indexWhere((p) => p.id == product.id);
 
     if (index >= 0) {
-      _items.removeWhere((p) => p.id == product.id);
+      await http.patch(
+        Uri.parse('$_baseUrl/${product.id}.json'),
+        body: jsonEncode({
+          "name": product.name,
+          "price": product.price,
+          "description": product.description,
+          "imageUrl": product.imageUrl,
+        }),
+      );
+
+      toastfy.success('Atualizado com sucesso!', null, 3);
+
+      _items[index] = product;
       notifyListeners();
+    }
+
+    return Future.value();
+  }
+
+  Future<void> removeProduct(Product product) async {
+    int index = _items.indexWhere((p) => p.id == product.id);
+
+    notifyListeners();
+
+    if (index >= 0) {
+      final removeProduct = _items[index];
+      _items.remove(removeProduct);
+
+      final response =
+          await http.delete(Uri.parse('$_baseUrl/${product.id}.json'));
+
+      if (response.statusCode >= 400) {
+        _items.insert(index, removeProduct);
+        notifyListeners();
+        throw HttpException(
+          msg: 'Não foi possível deletar o produto',
+          statusCode: response.statusCode,
+        );
+      }
     }
   }
 }

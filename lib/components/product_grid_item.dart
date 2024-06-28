@@ -41,6 +41,7 @@ class ProductGridItem extends StatelessWidget {
                     cart.removeSingleItem(product.id);
                   },
                 ),
+                null,
               );
               cart.addItem(product);
             },

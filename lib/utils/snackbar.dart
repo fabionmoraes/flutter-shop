@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 class Toastfy {
-  BuildContext context;
+  final BuildContext _context;
 
-  Toastfy(this.context);
+  Toastfy(this._context);
 
-  void _showMessage(String text, Color? color, SnackBarAction? action) {
-    var scaffoldMessenger = ScaffoldMessenger.of(context);
+  void _showMessage(
+      String text, Color? color, SnackBarAction? action, int? seconds) {
+    var scaffoldMessenger = ScaffoldMessenger.of(_context);
     scaffoldMessenger.hideCurrentSnackBar();
     scaffoldMessenger.showSnackBar(
       SnackBar(
@@ -16,7 +17,7 @@ class Toastfy {
             color: Colors.white,
           ),
         ),
-        duration: const Duration(seconds: 2),
+        duration: Duration(seconds: seconds ?? 2),
         backgroundColor: color,
         action: action,
       ),
@@ -26,28 +27,32 @@ class Toastfy {
   void show(
     String text,
     SnackBarAction? action,
+    int? seconds,
   ) {
-    _showMessage(text, null, action);
+    _showMessage(text, null, action, seconds);
   }
 
   void success(
     String text,
     SnackBarAction? action,
+    int? seconds,
   ) {
-    _showMessage(text, Colors.green, action);
+    _showMessage(text, Colors.green, action, seconds);
   }
 
   void error(
     String text,
     SnackBarAction? action,
+    int? seconds,
   ) {
-    _showMessage(text, Colors.red, action);
+    _showMessage(text, Colors.red, action, seconds);
   }
 
   void warning(
     String text,
     SnackBarAction? action,
+    int? seconds,
   ) {
-    _showMessage(text, Colors.orange, action);
+    _showMessage(text, Colors.orange, action, seconds);
   }
 }

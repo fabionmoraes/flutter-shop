@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 class AlertMessage {
-  BuildContext context;
+  final BuildContext _context;
 
-  AlertMessage(this.context);
+  AlertMessage(this._context);
 
   Future<bool?> confirmed(String description) {
     return showDialog<bool>(
-        context: context,
+        context: _context,
         builder: (ctx) => AlertDialog(
               title: const Text('Tem certeza?'),
               content: Text(description),
