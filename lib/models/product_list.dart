@@ -14,7 +14,15 @@ class ProductList with ChangeNotifier {
   final _baseUrl = Constants.productBaseUrl;
   final _errorText = 'Ocorreu algum erro na requisição';
 
-  final List<Product> _items = [];
+  final String _token;
+  final String _userId;
+  List<Product> _items = [];
+
+  ProductList([
+    this._token = '',
+    this._userId = '',
+    this._items = const [],
+  ]);
 
   List<Product> get items => [..._items];
   List<Product> get favoritesItems =>
@@ -45,22 +53,31 @@ class ProductList with ChangeNotifier {
   Future<void> loadProducts() async {
     _items.clear();
 
-    final response = await http.get(Uri.parse('$_baseUrl.json'));
+    final response = await http.get(Uri.parse('$_baseUrl.json?auth=$_token'));
 
     if (response.body == 'null') {
       return;
     }
 
+    final favResponse = await http.get(
+      Uri.parse('${Constants.userFavoriteBaseUrl}/$_userId.json?auth=$_token'),
+    );
+
+    Map<String, dynamic> favData =
+        favResponse.body == 'null' ? {} : jsonDecode(favResponse.body);
+
     Map<String, dynamic> data = jsonDecode(response.body);
 
     data.forEach((productId, productData) {
+      final isFavorite = favData[productId] ?? false;
+
       _items.add(Product(
         id: productId,
         name: productData['name'],
         description: productData['description'],
         price: productData['price'],
         imageUrl: productData['imageUrl'],
-        isFavorite: productData['isFavorite'],
+        isFavorite: isFavorite,
       ));
     });
 
@@ -71,13 +88,12 @@ class ProductList with ChangeNotifier {
     final toastfy = Toastfy(ctx);
 
     try {
-      final response = await http.post(Uri.parse('$_baseUrl.json'),
+      final response = await http.post(Uri.parse('$_baseUrl.json?auth=$_token'),
           body: jsonEncode({
             "name": product.name,
             "price": product.price,
             "description": product.description,
             "imageUrl": product.imageUrl,
-            "isFavorite": product.isFavorite,
           }));
 
       final result = jsonDecode(response.body);
@@ -108,7 +124,7 @@ class ProductList with ChangeNotifier {
 
     if (index >= 0) {
       await http.patch(
-        Uri.parse('$_baseUrl/${product.id}.json'),
+        Uri.parse('$_baseUrl/${product.id}.json?auth=$_token'),
         body: jsonEncode({
           "name": product.name,
           "price": product.price,
@@ -135,8 +151,8 @@ class ProductList with ChangeNotifier {
       final removeProduct = _items[index];
       _items.remove(removeProduct);
 
-      final response =
-          await http.delete(Uri.parse('$_baseUrl/${product.id}.json'));
+      final response = await http
+          .delete(Uri.parse('$_baseUrl/${product.id}.json?auth=$_token'));
 
       if (response.statusCode >= 400) {
         _items.insert(index, removeProduct);
