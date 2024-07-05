@@ -33,7 +33,10 @@ class MyApp extends StatelessWidget {
           create: (_) => ProductList(),
           update: (ctx, auth, previous) {
             return ProductList(
-                auth.token ?? '', auth.userId ?? '', previous?.items ?? []);
+              auth.token ?? '',
+              auth.userId ?? '',
+              previous?.items ?? [],
+            );
           },
         ),
         ChangeNotifierProvider(
@@ -43,7 +46,10 @@ class MyApp extends StatelessWidget {
           create: (_) => OrderList(),
           update: (ctx, auth, previous) {
             return OrderList(
-                auth.token ?? '', auth.userId ?? '', previous?.items ?? []);
+              auth.token ?? '',
+              auth.userId ?? '',
+              previous?.items ?? [],
+            );
           },
         ),
       ],

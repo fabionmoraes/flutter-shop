@@ -16,7 +16,8 @@ class AuthForm extends StatefulWidget {
   State<AuthForm> createState() => _AuthFormState();
 }
 
-class _AuthFormState extends State<AuthForm> {
+class _AuthFormState extends State<AuthForm>
+    with SingleTickerProviderStateMixin {
   final _passwordController = TextEditingController();
   AuthMode authmode = AuthMode.login;
   final Map<String, String> _authData = {
@@ -26,15 +27,58 @@ class _AuthFormState extends State<AuthForm> {
   bool _isLoading = false;
   final _formKey = GlobalKey<FormState>();
 
+  AnimationController? _controller;
+  Animation<double>? _opacityAnimation;
+  Animation<Offset>? _slideAnimation;
+
   bool get _isLogin => authmode == AuthMode.login;
-  bool get _isSignup => authmode == AuthMode.signup;
+  // bool get _isSignup => authmode == AuthMode.signup;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+
+    _opacityAnimation = Tween(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller!,
+        curve: Curves.linear,
+      ),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, -1.5),
+      end: const Offset(0, 0),
+    ).animate(
+      CurvedAnimation(
+        parent: _controller!,
+        curve: Curves.linear,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+
+    _controller?.dispose();
+  }
 
   void _switchAuthMode() {
     setState(() {
       if (_isLogin) {
         authmode = AuthMode.signup;
+        _controller?.forward();
       } else {
         authmode = AuthMode.login;
+        _controller?.reverse();
       }
     });
   }
@@ -89,7 +133,9 @@ class _AuthFormState extends State<AuthForm> {
 
     return Card(
       elevation: 8,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeIn,
         padding: const EdgeInsets.all(16),
         width: deviceSize.width * 0.75,
         height: _isLogin ? 310 : 400,
@@ -125,21 +171,34 @@ class _AuthFormState extends State<AuthForm> {
 
                     return null;
                   }),
-              if (_isSignup)
-                TextFormField(
-                  decoration:
-                      const InputDecoration(labelText: 'Confirmar Senha'),
-                  obscureText: true,
-                  validator: (value) {
-                    final password = value ?? '';
-
-                    if (password != _passwordController.text) {
-                      return 'Senha não confere';
-                    }
-
-                    return null;
-                  },
+              AnimatedContainer(
+                constraints: BoxConstraints(
+                  minHeight: _isLogin ? 0 : 60,
+                  maxHeight: _isLogin ? 0 : 120,
                 ),
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.linear,
+                child: FadeTransition(
+                  opacity: _opacityAnimation!,
+                  child: SlideTransition(
+                    position: _slideAnimation!,
+                    child: TextFormField(
+                      decoration:
+                          const InputDecoration(labelText: 'Confirmar Senha'),
+                      obscureText: true,
+                      validator: (value) {
+                        final password = value ?? '';
+
+                        if (password != _passwordController.text) {
+                          return 'Senha não confere';
+                        }
+
+                        return null;
+                      },
+                    ),
+                  ),
+                ),
+              ),
               const SizedBox(
                 height: 20,
               ),
